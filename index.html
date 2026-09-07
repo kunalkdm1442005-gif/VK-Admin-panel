@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>VK Nutrition — Product Admin</title>
+<link rel="stylesheet" href="./style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<!-- ============== LOGIN VIEW ============== -->
+<div id="view-login" class="login-shell">
+  <div class="login-card">
+    <div class="login-logo">VK</div>
+    <h1>Product Admin</h1>
+    <p class="sub">Private panel for VK Nutrition collaborators</p>
+    <form id="loginForm">
+      <div class="field">
+        <label for="loginEmail">Email</label>
+        <input type="email" id="loginEmail" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label for="loginPassword">Password</label>
+        <input type="password" id="loginPassword" autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="btn btn-primary" id="loginBtn">Sign in</button>
+      <div class="error-msg" id="loginError"></div>
+    </form>
+  </div>
+</div>
+
+<!-- ============== APP SHELL (shown after login) ============== -->
+<div id="view-app" class="app-shell hidden">
+  <div class="sidebar">
+    <div class="brand">VK Nutrition Admin</div>
+    <nav>
+      <button data-route="dashboard">Dashboard</button>
+      <button data-route="products">Products</button>
+      <button data-route="product-form" data-new="1">Add Product</button>
+    </nav>
+    <div class="user-box">
+      <span class="email" id="currentUserEmail"></span>
+      <button class="btn btn-secondary" id="logoutBtn" style="width:100%">Log out</button>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <!-- ---- DASHBOARD ---- -->
+    <section id="page-dashboard">
+      <h1>Dashboard</h1>
+      <p class="page-sub">A quick look at your catalogue.</p>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="num" id="statTotal">–</div><div class="label">Total products</div></div>
+        <div class="stat-card"><div class="num" id="statActive">–</div><div class="label">Active</div></div>
+        <div class="stat-card"><div class="num" id="statOOS">–</div><div class="label">Out of stock</div></div>
+        <div class="stat-card"><div class="num" id="statHidden">–</div><div class="label">Hidden</div></div>
+      </div>
+      <div class="quick-actions">
+        <button class="btn btn-primary" data-route="product-form" data-new="1">+ Add Product</button>
+        <button class="btn btn-secondary" data-route="products">View Catalogue</button>
+      </div>
+      <div class="card">
+        <h2>Recently updated</h2>
+        <table>
+          <thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Updated</th></tr></thead>
+          <tbody id="recentTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ---- PRODUCT CATALOGUE ---- -->
+    <section id="page-products" class="hidden">
+      <h1>Product Catalogue</h1>
+      <p class="page-sub">Search, filter, edit, or remove products. Changes go live immediately.</p>
+      <div class="toolbar">
+        <input type="text" id="searchInput" placeholder="Search by name or ID…">
+        <select id="categoryFilter"><option value="">All categories</option></select>
+        <select id="statusFilter">
+          <option value="">All statuses</option>
+          <option value="active">Active</option>
+          <option value="out_of_stock">Out of stock</option>
+          <option value="hidden">Hidden</option>
+        </select>
+        <button class="btn btn-primary" data-route="product-form" data-new="1">+ Add Product</button>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Status</th><th>Updated</th><th></th></tr></thead>
+          <tbody id="productsTableBody"></tbody>
+        </table>
+        <p id="productsEmpty" class="page-sub hidden">No products match your search.</p>
+      </div>
+    </section>
+
+    <!-- ---- ADD / EDIT PRODUCT FORM ---- -->
+    <section id="page-product-form" class="hidden">
+      <h1 id="formTitle">Add Product</h1>
+      <p class="page-sub">Fields marked * are required.</p>
+      <div class="card">
+        <form id="productForm">
+          <input type="hidden" id="pf_originalId">
+          <div class="form-grid">
+            <div class="field">
+              <label>Product ID (URL slug) *</label>
+              <input type="text" id="pf_id" required placeholder="e.g. whey-protein-1kg">
+            </div>
+            <div class="field">
+              <label>Product Name *</label>
+              <input type="text" id="pf_name" required>
+            </div>
+            <div class="field">
+              <label>Category *</label>
+              <input type="text" id="pf_category" list="categoryOptions" required>
+              <datalist id="categoryOptions"></datalist>
+            </div>
+            <div class="field">
+              <label>Pack size</label>
+              <input type="text" id="pf_pack" placeholder="e.g. 1 kg">
+            </div>
+            <div class="field">
+              <label>Price (₹) *</label>
+              <input type="number" id="pf_price" min="0" step="1" required>
+            </div>
+            <div class="field">
+              <label>Discount price (₹) — optional</label>
+              <input type="number" id="pf_discount_price" min="0" step="1">
+            </div>
+            <div class="field">
+              <label>Stock quantity *</label>
+              <input type="number" id="pf_stock" min="0" step="1" required value="0">
+            </div>
+            <div class="field">
+              <label>Status</label>
+              <select id="pf_status">
+                <option value="active">Active</option>
+                <option value="out_of_stock">Out of Stock</option>
+                <option value="hidden">Hidden</option>
+              </select>
+            </div>
+            <div class="field full">
+              <label>Description / Info</label>
+              <textarea id="pf_description" rows="4"></textarea>
+            </div>
+            <div class="field full">
+              <label>Highlights (short bullet points)</label>
+              <div id="highlightsList"></div>
+              <button type="button" class="btn btn-secondary" id="addHighlightBtn">+ Add highlight</button>
+            </div>
+            <div class="field full">
+              <label>Product Images</label>
+              <div class="image-uploader">
+                <input type="file" id="pf_imageFile" accept="image/*" multiple>
+                <p class="page-sub" style="margin:8px 0 0">Upload one or more images. Click a thumbnail's "Set primary" to choose the main image.</p>
+                <div class="image-list" id="imageList"></div>
+              </div>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary" id="saveProductBtn">Save Product</button>
+            <button type="button" class="btn btn-secondary" data-route="products">Cancel</button>
+            <button type="button" class="btn btn-danger hidden" id="deleteProductBtn" style="margin-left:auto">Delete Product</button>
+          </div>
+          <div class="error-msg" id="formError"></div>
+        </form>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<div id="confirmModal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <h3 id="confirmTitle">Are you sure?</h3>
+    <p id="confirmBody" class="page-sub"></p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="confirmCancel">Cancel</button>
+      <button class="btn btn-danger" id="confirmOk">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script src="./config.js"></script>
+<script src="./app.js"></script>
+</body>
+</html>
