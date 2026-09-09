@@ -90,11 +90,21 @@
         </select>
         <button class="btn btn-primary" data-route="product-form" data-new="1">+ Add Product</button>
       </div>
-      <div class="card">
-        <table>
-          <thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Status</th><th>Updated</th><th></th></tr></thead>
-          <tbody id="productsTableBody"></tbody>
-        </table>
+      <div class="view-toggle">
+        <button type="button" id="viewGridBtn" class="active">Grid</button>
+        <button type="button" id="viewListBtn">List</button>
+      </div>
+      <div class="card" id="productsGridView">
+        <div class="product-grid" id="productsGrid"></div>
+        <p id="productsGridEmpty" class="page-sub hidden">No products match your search.</p>
+      </div>
+      <div class="card hidden" id="productsListView">
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Status</th><th>Updated</th><th></th></tr></thead>
+            <tbody id="productsTableBody"></tbody>
+          </table>
+        </div>
         <p id="productsEmpty" class="page-sub hidden">No products match your search.</p>
       </div>
     </section>
