@@ -42,6 +42,7 @@
     <nav>
       <button data-route="dashboard">Dashboard</button>
       <button data-route="products">Products</button>
+      <button data-route="orders">Orders</button>
       <button data-route="product-form" data-new="1">Add Product</button>
     </nav>
     <div class="user-box">
@@ -106,6 +107,32 @@
           </table>
         </div>
         <p id="productsEmpty" class="page-sub hidden">No products match your search.</p>
+      </div>
+    </section>
+
+    <!-- ---- ORDERS ---- -->
+    <section id="page-orders" class="hidden">
+      <h1>Order History</h1>
+      <p class="page-sub">Every order placed on the store, oldest and newest. Synced live from Supabase.</p>
+      <div class="toolbar">
+        <input type="text" id="orderSearchInput" placeholder="Search by order code, name, phone or email…">
+        <select id="orderStatusFilter">
+          <option value="">All statuses</option>
+          <option value="pending">Pending</option>
+          <option value="paid">Paid</option>
+          <option value="shipped">Shipped</option>
+          <option value="delivered">Delivered</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+      <div class="card">
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Order</th><th>Customer</th><th>Phone</th><th>City / State</th><th>Items</th><th>Total</th><th>Payment</th><th>Status</th><th>Date</th><th></th></tr></thead>
+            <tbody id="ordersTableBody"></tbody>
+          </table>
+        </div>
+        <p id="ordersEmpty" class="page-sub hidden">No orders match your search.</p>
       </div>
     </section>
 
@@ -182,6 +209,38 @@
       </div>
     </section>
 
+  </div>
+</div>
+
+<div id="orderDetailModal" class="modal-overlay hidden">
+  <div class="modal-box order-modal-box">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <h3 id="orderDetailCode">Order</h3>
+      <button type="button" id="orderDetailClose" class="btn btn-secondary" style="padding:4px 10px">×</button>
+    </div>
+    <p class="page-sub" id="orderDetailDate"></p>
+    <div class="order-detail-grid">
+      <div>
+        <h4>Customer</h4>
+        <p id="odCustomerName"></p>
+        <p id="odCustomerPhone"></p>
+        <p id="odCustomerEmail"></p>
+      </div>
+      <div>
+        <h4>Shipping Address</h4>
+        <p id="odAddress"></p>
+      </div>
+    </div>
+    <h4>Items</h4>
+    <table class="order-items-table">
+      <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Subtotal</th></tr></thead>
+      <tbody id="odItemsBody"></tbody>
+    </table>
+    <div class="order-detail-totals" id="odTotals"></div>
+    <div style="margin-top:16px">
+      <span class="badge" id="odPaymentBadge"></span>
+      <span class="badge" id="odStatusBadge"></span>
+    </div>
   </div>
 </div>
 
