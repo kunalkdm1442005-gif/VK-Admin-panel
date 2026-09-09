@@ -22,12 +22,13 @@ function toast(msg, isError = false) {
 
 /* ---------------- Router ---------------- */
 function showPage(route) {
-  ["dashboard", "products", "product-form"].forEach((r) => {
+  ["dashboard", "products", "orders", "product-form"].forEach((r) => {
     $(`#page-${r}`).classList.toggle("hidden", r !== route);
   });
   $$("nav button[data-route]").forEach((b) => b.classList.toggle("active", b.dataset.route === route && !b.dataset.new));
   if (route === "dashboard") loadDashboard();
   if (route === "products") loadProducts();
+  if (route === "orders") loadOrders();
 }
 
 $$("[data-route]").forEach((btn) => {
@@ -233,6 +234,98 @@ function confirmDelete(id) {
   };
 }
 $("#confirmCancel").addEventListener("click", () => $("#confirmModal").classList.add("hidden"));
+
+/* ---------------- Orders ---------------- */
+let allOrders = [];
+
+async function loadOrders() {
+  const { data, error } = await sb.from("order_history").select("*").order("created_at", { ascending: false });
+  if (error) { toast("Failed to load orders: " + error.message, true); return; }
+  allOrders = data || [];
+  renderOrdersTable();
+}
+
+function renderOrdersTable() {
+  const q = $("#orderSearchInput").value.trim().toLowerCase();
+  const status = $("#orderStatusFilter").value;
+  const filtered = allOrders.filter((o) => {
+    const haystack = [o.order_code, o.customer_name, o.customer_mobile, o.customer_email].join(" ").toLowerCase();
+    const matchesQ = !q || haystack.includes(q);
+    const matchesStatus = !status || o.status === status;
+    return matchesQ && matchesStatus;
+  });
+
+  $("#ordersEmpty").classList.toggle("hidden", filtered.length !== 0);
+  $("#ordersTableBody").innerHTML = filtered.map((o) => {
+    const addr = o.shipping_address || {};
+    const itemCount = Array.isArray(o.items) ? o.items.reduce((sum, i) => sum + (i.qty || 0), 0) : 0;
+    return `
+    <tr>
+      <td>${escapeHtml(o.order_code || o.id)}</td>
+      <td>${escapeHtml(o.customer_name || "—")}</td>
+      <td>${escapeHtml(o.customer_mobile || "—")}</td>
+      <td>${escapeHtml([addr.city, addr.state].filter(Boolean).join(", ") || "—")}</td>
+      <td>${itemCount}</td>
+      <td>₹${Number(o.final_amount ?? o.total_amount ?? 0).toLocaleString("en-IN")}</td>
+      <td><span class="badge badge-${o.payment_status === "paid" ? "active" : "hidden"}">${escapeHtml(o.payment_status || "—")}</span></td>
+      <td><span class="badge badge-active">${escapeHtml(o.status || "—")}</span></td>
+      <td>${timeAgo(o.created_at)}</td>
+      <td class="row-actions"><button data-view-order="${escapeHtml(o.id)}">View</button></td>
+    </tr>`;
+  }).join("");
+}
+
+["orderSearchInput", "orderStatusFilter"].forEach((id) => {
+  $(`#${id}`)?.addEventListener("input", renderOrdersTable);
+  $(`#${id}`)?.addEventListener("change", renderOrdersTable);
+});
+
+document.body.addEventListener("click", (e) => {
+  const orderId = e.target.dataset.viewOrder;
+  if (orderId) openOrderDetail(orderId);
+});
+
+function openOrderDetail(orderId) {
+  const o = allOrders.find((ord) => ord.id === orderId);
+  if (!o) return;
+  const addr = o.shipping_address || {};
+  $("#orderDetailCode").textContent = `Order ${o.order_code || o.id}`;
+  $("#orderDetailDate").textContent = new Date(o.created_at).toLocaleString("en-IN");
+  $("#odCustomerName").textContent = o.customer_name || "—";
+  $("#odCustomerPhone").textContent = o.customer_mobile || "—";
+  $("#odCustomerEmail").textContent = o.customer_email || "—";
+  $("#odAddress").innerHTML = [
+    addr.address_line_1,
+    addr.address_line_2,
+    addr.landmark,
+    [addr.city, addr.state, addr.pin_code].filter(Boolean).join(", "),
+    addr.country,
+  ].filter(Boolean).map(escapeHtml).join("<br>") || "—";
+
+  const items = Array.isArray(o.items) ? o.items : [];
+  $("#odItemsBody").innerHTML = items.map((i) => `
+    <tr>
+      <td>${escapeHtml(i.name || i.id || "—")}</td>
+      <td>${i.qty ?? "—"}</td>
+      <td>₹${Number(i.price ?? 0).toLocaleString("en-IN")}</td>
+      <td>₹${Number((i.price ?? 0) * (i.qty ?? 0)).toLocaleString("en-IN")}</td>
+    </tr>`).join("");
+
+  $("#odTotals").innerHTML = `
+    <div>Subtotal: ₹${Number(o.subtotal_amount ?? 0).toLocaleString("en-IN")}</div>
+    <div>Shipping: ₹${Number(o.shipping_charge ?? 0).toLocaleString("en-IN")}</div>
+    <div>Discount: −₹${Number(o.discount_amount ?? 0).toLocaleString("en-IN")}</div>
+    <div style="font-weight:700">Total: ₹${Number(o.final_amount ?? o.total_amount ?? 0).toLocaleString("en-IN")}</div>
+  `;
+
+  $("#odPaymentBadge").textContent = "Payment: " + (o.payment_status || "—");
+  $("#odPaymentBadge").className = "badge badge-" + (o.payment_status === "paid" ? "active" : "hidden");
+  $("#odStatusBadge").textContent = "Order: " + (o.status || "—");
+  $("#odStatusBadge").className = "badge badge-active";
+
+  $("#orderDetailModal").classList.remove("hidden");
+}
+$("#orderDetailClose")?.addEventListener("click", () => $("#orderDetailModal").classList.add("hidden"));
 
 /* ---------------- Add / Edit form ---------------- */
 function resetForm() {
