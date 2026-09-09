@@ -135,16 +135,55 @@ function populateCategoryFilter() {
   $("#categoryOptions").innerHTML = cats.map((c) => `<option value="${escapeHtml(c)}">`).join("");
 }
 
-function renderProductsTable() {
+let currentView = "grid";
+
+$("#viewGridBtn").addEventListener("click", () => setView("grid"));
+$("#viewListBtn").addEventListener("click", () => setView("list"));
+
+function setView(view) {
+  currentView = view;
+  $("#viewGridBtn").classList.toggle("active", view === "grid");
+  $("#viewListBtn").classList.toggle("active", view === "list");
+  $("#productsGridView").classList.toggle("hidden", view !== "grid");
+  $("#productsListView").classList.toggle("hidden", view !== "list");
+  renderProductsTable();
+}
+
+function getFilteredProducts() {
   const q = $("#searchInput").value.trim().toLowerCase();
   const cat = $("#categoryFilter").value;
   const status = $("#statusFilter").value;
-  const filtered = allProducts.filter((p) => {
+  return allProducts.filter((p) => {
     const matchesQ = !q || p.name.toLowerCase().includes(q) || p.id.toLowerCase().includes(q);
     const matchesCat = !cat || p.category === cat;
     const matchesStatus = !status || p.status === status;
     return matchesQ && matchesCat && matchesStatus;
   });
+}
+
+function renderProductsTable() {
+  const filtered = getFilteredProducts();
+
+  if (currentView === "grid") {
+    $("#productsGridEmpty").classList.toggle("hidden", filtered.length !== 0);
+    $("#productsGrid").innerHTML = filtered.map((p) => `
+      <div class="product-card">
+        <div class="thumb">
+          ${p.images?.[0] ? `<img src="${escapeHtml(p.images[0])}" alt="" onerror="this.parentElement.innerHTML='<span class=&quot;no-image&quot;>No image</span>'">` : `<span class="no-image">No image</span>`}
+        </div>
+        <div class="info">
+          <span class="name">${escapeHtml(p.name)}</span>
+          <span class="cat">${escapeHtml(p.category)}</span>
+          <span class="price">₹${Number(p.discount_price ?? p.price).toLocaleString("en-IN")}</span>
+          <span class="badge badge-${p.status}">${statusLabel(p.status)}</span>
+          <div class="row-actions">
+            <button data-edit="${escapeHtml(p.id)}">Edit</button>
+            <button class="danger" data-delete="${escapeHtml(p.id)}">Delete</button>
+          </div>
+        </div>
+      </div>`).join("");
+    return;
+  }
 
   $("#productsEmpty").classList.toggle("hidden", filtered.length !== 0);
   $("#productsTableBody").innerHTML = filtered.map((p) => `
@@ -172,7 +211,7 @@ function statusLabel(s) { return s === "active" ? "Active" : s === "out_of_stock
   $(`#${id}`).addEventListener("change", renderProductsTable);
 });
 
-$("#productsTableBody").addEventListener("click", (e) => {
+document.body.addEventListener("click", (e) => {
   const editId = e.target.dataset.edit;
   const delId = e.target.dataset.delete;
   if (editId) openEditForm(editId);
